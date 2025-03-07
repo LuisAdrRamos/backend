@@ -7,6 +7,7 @@ import cors from 'cors';
 import admin from './routers/admin_routes.js'
 import usuario from './routers/usuario_routes.js'
 import disfraz from './routers/disfraces_routes.js'
+import festividad from './models/festividad.js';
 
 
 // Inicializaciones
@@ -31,6 +32,7 @@ app.get('/', (req, res) => {
 app.use('/api/admin', admin)
 app.use('/api/usuario', usuario)
 app.use('/api/disfraz', disfraz)
+app.use('/api/festividad', festividad)
 
 
 

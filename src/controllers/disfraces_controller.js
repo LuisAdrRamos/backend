@@ -31,9 +31,9 @@ const detalleDisfraces = async (req, res) => {
 // Método para registrar un disfraz
 const registrarDisfraz = async (req, res) => {
     try {
-        const { nombre, categoria, precio, calidad, descripcion, talla } = req.body;
+        const { nombre, categoria, precio, calidad, descripcion, talla, festividad } = req.body;
 
-        if (!nombre || !categoria || !precio || !calidad || !descripcion || !talla) {
+        if (!nombre || !categoria || !precio || !calidad || !descripcion || !talla || !festividad) {
             return res.status(400).json({ msg: "❌ Todos los campos son necesarios" });
         }
 
@@ -46,6 +46,7 @@ const registrarDisfraz = async (req, res) => {
             calidad,
             descripcion,
             talla,
+            festividad,
             imagen: imagenUrl,
         });
 
@@ -61,7 +62,7 @@ const registrarDisfraz = async (req, res) => {
 // Método para actualizar un disfraz
 const actualizarDisfraz = async (req, res) => {
     const { id } = req.params;
-    const { nombre, categoria, precio, calidad, descripcion, talla } = req.body;
+    const { nombre, categoria, precio, calidad, descripcion, talla, festividad } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ msg: `❌ Lo sentimos, no existe el disfraz ${id}` });
@@ -81,6 +82,7 @@ const actualizarDisfraz = async (req, res) => {
         disfraz.calidad = calidad || disfraz.calidad;
         disfraz.descripcion = descripcion || disfraz.descripcion;
         disfraz.talla = talla || disfraz.talla;
+        disfraz.festividad = festividad || disfraz.festividad;
 
         // Manejo de la imagen (si se sube una nueva)
         if (req.file) { 

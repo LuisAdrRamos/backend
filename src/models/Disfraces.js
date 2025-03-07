@@ -35,7 +35,14 @@ const disfrazSchema = new Schema({
         type: String,
         required: false,
         default: null
-    }
+    },
+    favoritos: { 
+        type: Number, default: 0 
+    },
+    compras: { 
+        type: Number, default: 0 
+    },
+    festividad: { type: mongoose.Schema.Types.ObjectId, ref: "Festividad", default: null}
 
 }, {
     timestamps: true
