@@ -1,319 +1,248 @@
-// IMPORTAR EL MODELO
-import Usuario from "../models/Usuario.js"
+import Usuario from "../models/Usuario.js";
+import generarJWT from "../helpers/crearJWT.js";
+import { sendMailToRecoveryPassword } from "../config/nodemailer.js";
 import Disfraz from "../models/Disfraces.js";
-// IMPORTAR EL MÉTODO sendMailToPaciente
-import { sendMailToUsuario, sendMailToRecoveryPassword } from "../config/nodemailer.js";
 
-import mongoose from "mongoose"
-import generarJWT from "../helpers/crearJWT.js"
-
-
-// Método para registrar un usuario
+// Registro de usuario (sin confirmación por correo)
 const registrarUsuario = async (req, res) => {
     const { email, password } = req.body;
     if (Object.values(req.body).includes("")) {
-        return res.status(400).json({ msg: "❌ Lo sentimos, debes llenar todos los campos" });
+        return res.status(400).json({ msg: "❌ Debes llenar todos los campos" });
     }
 
-    const verificarEmailBDD = await Usuario.findOne({ email });     // Obtener el usuario en base al email
-    if (verificarEmailBDD) {     // Verificar si el usuario ya se encuentra registrado
-        return res.status(400).json({ msg: "❌ Lo sentimos, el email ya se encuentra registrado" });
+    try {
+        const existeUsuario = await Usuario.findOne({ where: { email } });
+        if (existeUsuario) {
+            return res.status(400).json({ msg: "❌ El email ya se encuentra registrado" });
+        }
+
+        const nuevoUsuario = await Usuario.create(req.body);
+        res.status(201).json({ msg: "✅ Usuario registrado correctamente", usuario: nuevoUsuario });
+    } catch (error) {
+        console.error("❌ Error al registrar el usuario:", error);
+        res.status(500).json({ msg: "❌ Error en el servidor", error });
     }
-
-
-    const nuevoUsuario = new Usuario(req.body);     // Crear una instancia del Usuario
-    nuevoUsuario.password = await nuevoUsuario.encrypPassword(password);     // Encriptar el password
-
-    const token = generarJWT(nuevoUsuario._id, "usuario");  // Crear el token 
-
-    // Enviar el correo electrónico
-    await sendMailToUsuario(email, token);
-
-    // Guardar en la base de datos
-    await nuevoUsuario.save();
-
-    // Presentar resultados
-    res.status(200).json({ msg: "✅ Revisa tu correo electrónico para confirmar tu cuenta" });
 };
 
-
-// Método para confirmar el token del usuario
-const confirmarUsuario = async (req, res) => {
-    if (!req.params.token) {
-        return res.status(400).json({ msg: "❌ No se puede validar la cuenta" });
-    }
-
-    const usuarioBDD = await Usuario.findOne({ token: req.params.token });
-
-    if (!usuarioBDD) {
-        return res.status(404).json({ msg: "El usuario ya ha sido confirmado o el token no es válido" });
-    }
-
-    usuarioBDD.token = null;
-    usuarioBDD.confirmEmail = true;
-    await usuarioBDD.save();
-
-    res.status(200).json({ msg: "✅ Cuenta confirmada, ahora puedes iniciar sesión" });
-};
-
-
-// 🔹 Método para el login del usuario
+// Login
 const loginUsuario = async (req, res) => {
     const { email, password } = req.body;
 
-    if (Object.values(req.body).includes(""))
-        return res.status(404).json({ msg: "❌ Lo sentimos, debes llenar todos los campos" });
+    if (!email || !password)
+        return res.status(400).json({ msg: "❌ Debes llenar todos los campos" });
 
-    const usuarioBDD = await Usuario.findOne({ email });
-    if (!usuarioBDD)
-        return res.status(404).json({ msg: "❌ Lo sentimos, el usuario no se encuentra registrado" });
+    try {
+        const usuarioBDD = await Usuario.findOne({ where: { email } });
+        if (!usuarioBDD)
+            return res.status(404).json({ msg: "❌ Usuario no registrado" });
 
-    const verificarPassword = await usuarioBDD.matchPassword(password);
-    if (!verificarPassword)
-        return res.status(404).json({ msg: "❌ Lo sentimos, el password no es el correcto" });
+        const esValido = await usuarioBDD.matchPassword(password);
+        if (!esValido)
+            return res.status(401).json({ msg: "❌ Contraseña incorrecta" });
 
-    console.log("✅ Usuario autenticado:", usuarioBDD._id);
+        const token = generarJWT(usuarioBDD.id, "usuario");
 
-    const token = generarJWT(usuarioBDD._id, "usuario");
+        const { nombre, apellido, celular, id: _id } = usuarioBDD;
+        res.status(200).json({ token, nombre, apellido, email, celular, rol: "usuario", _id });
 
-    const { nombre, apellido, email: emailP, celular, _id } = usuarioBDD;
-    res.status(200).json({
-        token,
-        nombre,
-        apellido,
-        emailP,
-        celular,
-        rol: "usuario",
-        _id
-    });
+    } catch (error) {
+        console.error("❌ Error en login:", error);
+        res.status(500).json({ msg: "❌ Error en el servidor", error });
+    }
 };
 
-
-// Función para limpiar datos del usuario
-const limpiarDatos = (usuarioBDD) => {
-    delete usuarioBDD.password;
-    delete usuarioBDD.createdAt;
-    delete usuarioBDD.updatedAt;
-    delete usuarioBDD.__v;
-    return usuarioBDD;
-};
-
-
-// Método para ver el perfil del usuario
+// Perfil del usuario autenticado
 const perfilUsuario = async (req, res) => {
     try {
-        if (!req.usuarioBDD || !req.usuarioBDD._id) {
+        const { usuarioBDD } = req;
+        if (!usuarioBDD) {
             return res.status(401).json({ msg: "❌ Usuario no autenticado" });
         }
 
-        const usuarioLimpio = limpiarDatos(req.usuarioBDD);
-        res.status(200).json({ ...usuarioLimpio, rol: "usuario" });
+        res.status(200).json({ ...usuarioBDD.dataValues, rol: "usuario" });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ msg: "❌ Error interno del servidor" });
+        res.status(500).json({ msg: "❌ Error al obtener el perfil" });
     }
 };
 
-
-// Método para actualizar un usuario
+// Actualizar usuario
 const actualizarUsuario = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.usuarioBDD;
+    const campos = req.body;
 
-    // verificar que no haya campos vacíos
-    if (Object.values(req.body).includes("")) {
-        return res.status(400).json({ msg: "❌ lo sentimos, debes llenar todos los campos" });
-    }
-
-    // validar que el id sea válido
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({ msg: `❌ lo sentimos, no existe el usuario ${id}` });
+    if (Object.values(campos).includes("")) {
+        return res.status(400).json({ msg: "❌ Todos los campos son obligatorios" });
     }
 
     try {
-        const usuario = await Usuario.findById(id);
-        if (!usuario) {
-            return res.status(404).json({ msg: "❌ usuario no encontrado" });
-        }
+        const usuario = await Usuario.findByPk(id);
+        if (!usuario) return res.status(404).json({ msg: "❌ Usuario no encontrado" });
 
-        // actualizar los valores solo si fueron enviados en la solicitud
-        usuario.nombre = req.body.nombre || usuario.nombre;
-        usuario.apellido = req.body.apellido || usuario.apellido;
-        usuario.email = req.body.email || usuario.email;
-        usuario.telefono = req.body.telefono || usuario.telefono;
-        usuario.direccion = req.body.direccion || usuario.direccion;
+        await usuario.update(campos);
 
-        await usuario.save();
-
-        res.status(200).json({ msg: "✅ actualización exitosa del usuario", usuario });
+        res.status(200).json({ msg: "✅ Usuario actualizado", usuario });
     } catch (error) {
-        console.error("❌ error al actualizar el usuario:", error);
-        res.status(500).json({ msg: "❌ error al actualizar el usuario", error });
+        res.status(500).json({ msg: "❌ Error al actualizar el usuario", error });
     }
 };
 
-
-// 🔹 Método para actualizar la contraseña del usuario autenticado
+// Cambiar contraseña
 const actualizarPassword = async (req, res) => {
     try {
-        if (!req.usuarioBDD) {
-            return res.status(401).json({ msg: "❌ Acceso no autorizado, usuario no autenticado" });
-        }
+        const { usuarioBDD } = req;
+        const { passwordactual, passwordnuevo } = req.body;
 
-        const usuarioBDD = await Usuario.findById(req.usuarioBDD._id);
-        if (!usuarioBDD) {
-            return res.status(404).json({ msg: "❌ Lo sentimos, no existe el usuario" });
-        }
+        const usuario = await Usuario.findByPk(usuarioBDD.id);
+        if (!usuario) return res.status(404).json({ msg: "❌ Usuario no encontrado" });
 
-        const verificarPassword = await usuarioBDD.matchPassword(req.body.passwordactual);
-        if (!verificarPassword) {
-            return res.status(400).json({ msg: "❌ El password actual es incorrecto" });
-        }
+        const coincide = await usuario.matchPassword(passwordactual);
+        if (!coincide)
+            return res.status(400).json({ msg: "❌ La contraseña actual no es válida" });
 
-        usuarioBDD.password = await usuarioBDD.encrypPassword(req.body.passwordnuevo);
-        await usuarioBDD.save();
+        usuario.password = passwordnuevo;
+        await usuario.save();
 
-        res.status(200).json({ msg: "✅ Password actualizado correctamente" });
+        res.status(200).json({ msg: "✅ Contraseña actualizada correctamente" });
     } catch (error) {
-        console.error("❌ Error al actualizar el password:", error);
-        res.status(500).json({ msg: "❌ Error en el servidor" });
+        res.status(500).json({ msg: "❌ Error al actualizar contraseña", error });
     }
 };
 
-
-// 🔹 Método para enviar un correo de recuperación de contraseña
+// Recuperar contraseña
 const recuperarPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ msg: "❌ Debes proporcionar un correo electrónico" });
 
-    const usuarioBDD = await Usuario.findOne({ email });
-    if (!usuarioBDD) return res.status(404).json({ msg: "❌ Usuario no encontrado" });
+    try {
+        const usuarioBDD = await Usuario.findOne({ where: { email } });
+        if (!usuarioBDD) return res.status(404).json({ msg: "❌ Usuario no encontrado" });
 
-    const token = generarJWT(usuarioBDD._id, "usuario");
-    usuarioBDD.token = token;
+        const token = generarJWT(usuarioBDD.id, "usuario");
+        usuarioBDD.token = token;
+        await usuarioBDD.save();
 
-    await sendMailToRecoveryPassword(email, token);
-    await usuarioBDD.save();
+        await sendMailToRecoveryPassword(email, token);
 
-    res.status(200).json({ msg: "✅ Revisa tu correo para restablecer la contraseña" });
+        res.status(200).json({ msg: "✅ Revisa tu correo para restablecer la contraseña" });
+    } catch (error) {
+        res.status(500).json({ msg: "❌ Error al enviar correo de recuperación", error });
+    }
 };
 
-
-// 🔹 Método para comprobar si el token de recuperación es válido
+// Comprobar token de recuperación de contraseña
 const comprobarTokenPassword = async (req, res) => {
     const { token } = req.params;
     if (!token) return res.status(400).json({ msg: "❌ Token inválido" });
 
-    const usuarioBDD = await Usuario.findOne({ token });
-    if (!usuarioBDD) return res.status(404).json({ msg: "❌ Token no válido o expirado" });
+    try {
+        const usuarioBDD = await Usuario.findOne({ where: { token } });
+        if (!usuarioBDD) return res.status(404).json({ msg: "❌ Token no válido o expirado" });
 
-    res.status(200).json({ msg: "✅ Token confirmado, puedes cambiar la contraseña" });
+        res.status(200).json({ msg: "✅ Token confirmado, puedes cambiar la contraseña" });
+    } catch (error) {
+        res.status(500).json({ msg: "❌ Error al validar el token", error });
+    }
 };
 
 
-// 🔹 Método para cambiar la contraseña del usuario usando el token
+// Cambiar contraseña con token
 const nuevoPassword = async (req, res) => {
     const { token } = req.params;
     const { password, confirmpassword } = req.body;
 
-    if (!password || !confirmpassword)
+    if (!password || !confirmpassword) {
         return res.status(400).json({ msg: "❌ Debes llenar todos los campos" });
+    }
 
-    if (password !== confirmpassword)
+    if (password !== confirmpassword) {
         return res.status(400).json({ msg: "❌ Las contraseñas no coinciden" });
+    }
 
-    const usuarioBDD = await Usuario.findOne({ token });
-    console.log("🔍 Usuario encontrado:", usuarioBDD);
-    if (!usuarioBDD) return res.status(404).json({ msg: "❌ Token inválido" });
+    try {
+        const usuarioBDD = await Usuario.findOne({ where: { token } });
+        if (!usuarioBDD) return res.status(404).json({ msg: "❌ Token inválido" });
 
-    usuarioBDD.token = null;
-    usuarioBDD.password = await usuarioBDD.encrypPassword(password);
-    console.log("🔑 Nueva contraseña encriptada:", usuarioBDD.password);
+        usuarioBDD.token = null;
+        usuarioBDD.password = password;
+        await usuarioBDD.save();
 
-    await usuarioBDD.save();
-    const usuarioVerificado = await Usuario.findById(usuarioBDD._id);
-    console.log("✅ Contraseña actualizada en la BD:", usuarioVerificado.password);
-
-    res.status(200).json({ msg: "✅ Contraseña actualizada con éxito, ya puedes iniciar sesión" });
+        res.status(200).json({ msg: "✅ Contraseña actualizada con éxito, ya puedes iniciar sesión" });
+    } catch (error) {
+        res.status(500).json({ msg: "❌ Error al actualizar contraseña", error });
+    }
 };
 
 
-// Método para agregar un disfraz a los favoritos del usuario
+// Agregar a favoritos
 const agregarFavorito = async (req, res) => {
     const { idDisfraz } = req.params;
-    const { usuarioBDD } = req;
+    const usuario = req.usuarioBDD;
 
     try {
-        if (!mongoose.Types.ObjectId.isValid(idDisfraz)) {
-            return res.status(400).json({ msg: "❌ ID de disfraz inválido" });
-        }
-
-        const disfraz = await Disfraz.findById(idDisfraz);
+        const disfraz = await Disfraz.findByPk(idDisfraz);
         if (!disfraz) {
             return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
         }
 
-        if (!usuarioBDD.disfracesFavoritos.includes(idDisfraz)) {
-            usuarioBDD.disfracesFavoritos.push(idDisfraz);
-            await usuarioBDD.save();
-        }
+        // Agrega el disfraz a los favoritos del usuario
+        await usuario.addFavorito(disfraz);
 
-        usuarioBDD.disfracesFavoritos.addToSet(idDisfraz);
-        await usuarioBDD.save();
+        // Incrementar contador
+        disfraz.favoritos += 1;
+        await disfraz.save();
 
-        res.status(200).json({ msg: "✅ Disfraz agregado a favoritos", favoritos: usuarioBDD.disfracesFavoritos });
-        console.log("📝 Favoritos actualizados:", usuarioBDD.disfracesFavoritos);
-
+        res.status(200).json({ msg: "✅ Disfraz añadido a favoritos" });
     } catch (error) {
         console.error("❌ Error al agregar favorito:", error);
-        res.status(500).json({ msg: "❌ Error al agregar favorito", error: error.message });
+        res.status(500).json({ msg: "❌ Error al agregar favorito", error });
     }
 };
 
-
-// Método para eliminar un disfraz de los favoritos del usuario
+// Eliminar de favoritos
 const eliminarFavorito = async (req, res) => {
     const { idDisfraz } = req.params;
-    const { usuarioBDD } = req;
+    const usuario = req.usuarioBDD;
 
     try {
-        if (!mongoose.Types.ObjectId.isValid(idDisfraz)) {
-            return res.status(400).json({ msg: "❌ ID de disfraz inválido" });
+        const disfraz = await Disfraz.findByPk(idDisfraz);
+        if (!disfraz) {
+            return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
         }
 
-        if (usuarioBDD.disfracesFavoritos.includes(idDisfraz)) {
-            usuarioBDD.disfracesFavoritos.pull(idDisfraz);
-            await usuarioBDD.save();
-        }
+        await usuario.removeFavorito(disfraz);
 
-        res.status(200).json({ msg: "✅ Disfraz eliminado de favoritos", favoritos: usuarioBDD.disfracesFavoritos });
+        // Reducir contador sin que quede negativo
+        disfraz.favoritos = Math.max(0, disfraz.favoritos - 1);
+        await disfraz.save();
+
+        res.status(200).json({ msg: "✅ Disfraz eliminado de favoritos" });
     } catch (error) {
         console.error("❌ Error al eliminar favorito:", error);
-        res.status(500).json({ msg: "❌ Error al eliminar favorito" });
+        res.status(500).json({ msg: "❌ Error al eliminar favorito", error });
     }
 };
 
-
-// Método para listar los disfraces favoritos del usuario
+// Listar favoritos
 const listarFavoritos = async (req, res) => {
     try {
-        if (!req.usuarioBDD) {
-            return res.status(401).json({ msg: "❌ Usuario no autenticado" });
-        }
+        const usuario = await Usuario.findByPk(req.usuarioBDD.id, {
+            include: {
+                model: Disfraz,
+                as: "favoritos",
+                through: { attributes: [] } // no mostrar la tabla intermedia
+            }
+        });
 
-        const usuario = await Usuario.findById(req.usuarioBDD._id).populate("disfracesFavoritos").exec();
-        res.status(200).json({ favoritos: usuario.disfracesFavoritos });
-
+        res.status(200).json({ favoritos: usuario.favoritos });
     } catch (error) {
-        console.error("❌ Error al obtener favoritos:", error);
-        res.status(500).json({ msg: "❌ Error al obtener favoritos" });
+        console.error("❌ Error al listar favoritos:", error);
+        res.status(500).json({ msg: "❌ Error al obtener favoritos", error });
     }
 };
 
-
+// Exportar métodos
 export {
     registrarUsuario,
-    confirmarUsuario,
-
     loginUsuario,
     perfilUsuario,
     actualizarUsuario,
@@ -322,8 +251,8 @@ export {
     recuperarPassword,
     comprobarTokenPassword,
     nuevoPassword,
-
+    
     agregarFavorito,
     eliminarFavorito,
     listarFavoritos
-}
+};

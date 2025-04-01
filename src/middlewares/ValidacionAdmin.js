@@ -1,49 +1,44 @@
-import { check, validationResult } from 'express-validator'
+import { check, validationResult } from 'express-validator';
 
-export const validacionAdmin =[
-    check(["nombre","apellido","direccion","telefono","email","password"])
-        .exists()
-            .withMessage('Los campos "nombre" "apellido" "dirección" "teléfono" "email" y/o "password" son obligatorios')
-        .notEmpty()
-            .withMessage('Los campos "nombre" "apellido" "dirección" "teléfono" "email" y/o "password" no pueden estar vacíos')
-        .customSanitizer(value => value?.trim()),
+export const validacionAdmin = [
+    check("nombre")
+        .notEmpty().withMessage('El nombre es obligatorio')
+        .isLength({ min: 3, max: 12 }).withMessage('El nombre debe tener entre 3 y 12 caracteres')
+        .isAlpha('es-ES', { ignore: 'áéíóúÁÉÍÓÚñÑ' }).withMessage('El nombre debe contener solo letras')
+        .trim(),
 
-    check(["nombre","apellido"])
-        .isLength({ min: 3, max: 12 })
-            .withMessage('El campo "nombre" y/o "apellido" debe(n) tener entre 3 y 12 caracteres')
-        .isAlpha('es-ES', { ignore: 'áéíóúÁÉÍÓÚñÑ' })
-            .withMessage('El campo "nombre" y/o "apellido" debe(n) contener solo letras')
-        .customSanitizer(value => value?.trim()),
+    check("apellido")
+        .notEmpty().withMessage('El apellido es obligatorio')
+        .isLength({ min: 3, max: 12 }).withMessage('El apellido debe tener entre 3 y 12 caracteres')
+        .isAlpha('es-ES', { ignore: 'áéíóúÁÉÍÓÚñÑ' }).withMessage('El apellido debe contener solo letras')
+        .trim(),
 
     check("direccion")
-        .isLength({ min: 3, max: 20 })
-            .withMessage('El campo "dirección" debe tener entre 3 y 20 caracteres')
-        .customSanitizer(value => value?.trim()),
+        .notEmpty().withMessage('La dirección es obligatoria')
+        .isLength({ min: 3, max: 20 }).withMessage('La dirección debe tener entre 3 y 20 caracteres')
+        .trim(),
 
     check("telefono")
-        .isLength({ min: 10 })
-            .withMessage('El campo "teléfono" debe tener al menos 10 digitos')
-        .isNumeric()
-            .withMessage('El campo "teléfono" debe contener solo números')
-        .customSanitizer(value => value?.trim()),
+        .notEmpty().withMessage('El teléfono es obligatorio')
+        .isLength({ min: 10 }).withMessage('El teléfono debe tener al menos 10 dígitos')
+        .isNumeric().withMessage('El teléfono debe contener solo números')
+        .trim(),
 
     check("email")
-        .isEmail()
-            .withMessage('El campo "email" no es correcto')
-        .customSanitizer(value => value?.trim()),
+        .notEmpty().withMessage('El correo es obligatorio')
+        .isEmail().withMessage('El correo no tiene formato válido')
+        .trim(),
 
     check("password")
-        .isLength({ min: 5 })
-            .withMessage('El campo "password" debe tener al menos 5 caracteres')
-        .customSanitizer(value => value?.trim()),
+        .notEmpty().withMessage('La contraseña es obligatoria')
+        .isLength({ min: 5 }).withMessage('La contraseña debe tener al menos 5 caracteres')
+        .trim(),
 
-
-    (req,res,next)=>{
+    (req, res, next) => {
         const errors = validationResult(req);
-        if (errors.isEmpty()) {
-            return next();
-        } else {
+        if (!errors.isEmpty()) {
             return res.status(400).send({ errors: errors.array() });
         }
+        next();
     }
-]
+];

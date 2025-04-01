@@ -1,75 +1,54 @@
-import mongoose, { Schema, model } from 'mongoose';
+// models/Usuario.js
+import { DataTypes } from "sequelize";
+import { sequelize } from "../database.js";
 import bcrypt from "bcryptjs";
 
-// Definición del esquema para el Usuario
-const usuarioSchema = new Schema({
-    nombre: {
-        type: String,
-        required: true,
-        trim: true
+const Usuario = sequelize.define("Usuario", {
+    nombre: DataTypes.STRING,
+
+    apellido: DataTypes.STRING,
+
+    email: { 
+        type: DataTypes.STRING, unique: true 
     },
-    apellido: {
-        type: String,
-        required: true,
-        trim: true
+    password: DataTypes.STRING,
+
+    celular: DataTypes.STRING,
+
+    direccion: DataTypes.STRING,
+
+    estado: { 
+        type: DataTypes.BOOLEAN, defaultValue: true 
+
     },
-    email: {
-        type: String,
-        required: true,
-        unique: true, 
-        trim: true,
-        lowercase: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    celular: {
-        type: String,
-        required: false,
-        trim: true
-    },
-    direccion: {  // 🔹 Nuevo campo de dirección
-        type: String,
-        required: false,
-        trim: true
-    },
-    fechaRegistro: {
-        type: Date,
-        required: true,
-        trim:true,
-        default: Date.now()
-    },
-    estado: {
-        type: Boolean,
-        default: true
-    },
-    token: {
-        type: String,
-        unique: true, // 🔹 Garantiza que cada usuario tenga un token único
-        default: null
-    },    
-    // Este campo puede ser relacionado a periféricos si el usuario está asociado con algún grupo de periféricos
-    disfracesFavoritos: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Disfraces'
-    }],
-    // Este campo puede ser útil si el usuario tiene roles específicos
+    token: DataTypes.STRING,
+
+    fechaRegistro: { 
+        type: DataTypes.DATE, defaultValue: DataTypes.NOW 
+    }
 }, {
-    timestamps: true
+    timestamps: true,
+
+    // Puedes usar hooks para encriptar el password automáticamente antes de crear o actualizar
+    hooks: {
+        beforeCreate: async (usuario) => {
+            if (usuario.password) {
+                const salt = await bcrypt.genSalt(10);
+                usuario.password = await bcrypt.hash(usuario.password, salt);
+            }
+        },
+        beforeUpdate: async (usuario) => {
+            if (usuario.changed("password")) {
+                const salt = await bcrypt.genSalt(10);
+                usuario.password = await bcrypt.hash(usuario.password, salt);
+            }
+        }
+    }
 });
 
-// Método para cifrar el password del Usuario
-usuarioSchema.methods.encrypPassword = async function (password) {
-    const salt = await bcrypt.genSalt(10)
-    const passwordEncryp = await bcrypt.hash(password,salt)
-    return passwordEncryp
-}
+// 🔐 Método para verificar el password (instancia)
+Usuario.prototype.matchPassword = async function (password) {
+    return await bcrypt.compare(password, this.password);
+};
 
-// Método para verificar si el password ingresado es el mismo que el de la BDD
-usuarioSchema.methods.matchPassword = async function(password){
-    const response = await bcrypt.compare(password,this.password)
-    return response
-}
-
-export default model('Usuario', usuarioSchema);
+export default Usuario;

@@ -1,90 +1,45 @@
-// Importar el Schema y el modelo de mongoose
-import { Schema, model } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import { DataTypes } from "sequelize";
+import { sequelize } from "../database.js";
+import bcrypt from "bcryptjs";
 
-const AdminSchema = new Schema({
-    nombre: {
-        type: String,
-        required: true,
-        trim: true
+const Admin = sequelize.define("Admin", {
+    nombre: DataTypes.STRING,
+    apellido: DataTypes.STRING,
+    direccion: DataTypes.STRING,
+    telefono: DataTypes.STRING,
+    email: { 
+        type: DataTypes.STRING, unique: true, allowNull: false 
     },
-
-    apellido: {
-        type: String,
-        required: true,
-        trim: true
+    password: { 
+        type: DataTypes.STRING, allowNull: false 
     },
-
-    direccion: {
-        type: String,
-        required: true,
-        trim: true
-    }, 
-
-    telefono: {
-        type: String,
-        required: true,
-        trim: true
-    },
-
-    email: {
-        type: String,   
-        required: true,
-        trim: true,
-        unique: true
-    },
-
-    password: {
-        type: String,   
-        required: true
-    },
-
     rol: {
-        type: String,
-        enum: ['admin', 'moderador'],   
-        require: true,  
-        default: 'moderador'
+        type: DataTypes.ENUM("admin", "moderador"),
+        defaultValue: "moderador"
     },
-
-    permisos: {
-        type: [String],
-        default: ['manage-users', 'manage-peripherals'] // Permisos por defecto
-    },
-
-    status: {
-        type: Boolean,
-        default: true
-    },
-
-    token: {
-        type: String, // Almacenar token temporal para confirmaciones o recuperación de contraseña
-        default: null
-    }
-
+    status: { type: DataTypes.BOOLEAN, defaultValue: true },
+    token: DataTypes.STRING
 }, {
-
-    timestamps: true
-
+    timestamps: true,
+    hooks: {
+        beforeCreate: async (admin) => {
+            if (admin.password) {
+                const salt = await bcrypt.genSalt(10);
+                admin.password = await bcrypt.hash(admin.password, salt);
+            }
+        },
+        beforeUpdate: async (admin) => {
+            if (admin.changed("password")) {
+                const salt = await bcrypt.genSalt(10);
+                admin.password = await bcrypt.hash(admin.password, salt);
+            }
+        }
+    }
 });
 
-// Método para cifrar el password del administrador
-AdminSchema.methods.encrypPassword = async function(password) {
-    const salt = await bcrypt.genSalt(10);
-    const passwordEncryp = await bcrypt.hash(password, salt);
-    return passwordEncryp;
+// Método para verificar password
+Admin.prototype.matchPassword = async function (password) {
+    return await bcrypt.compare(password, this.password);
 };
 
-// Método para verificar si el password ingresado es el mismo de la BDD
-AdminSchema.methods.matchPassword = async function(password) {
-    const response = await bcrypt.compare(password, this.password);
-    return response;
-};
-
-// Método para crear un token
-AdminSchema.methods.crearToken = function() {
-    const tokenGenerado = Math.random().toString(36).slice(2);
-    this.token = tokenGenerado; // Asignar el token al campo del modelo
-    return tokenGenerado;
-};
-
-export default model('Admin', AdminSchema);
+export default Admin;

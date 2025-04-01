@@ -7,7 +7,7 @@ import cors from 'cors';
 import admin from './routers/admin_routes.js'
 import usuario from './routers/usuario_routes.js'
 import disfraz from './routers/disfraces_routes.js'
-import festividad from './models/festividad.js';
+import festividad from './routers/festividad_routes.js';
 
 
 // Inicializaciones

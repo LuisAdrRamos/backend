@@ -14,16 +14,21 @@ const verificarAutenticacion = async (req, res, next) => {
         const { id, rol } = decodedToken;
 
         if (rol === "usuario") {
-            req.usuarioBDD = await Usuario.findById(id).select("-password"); // 🔹 Eliminado `.lean()`
+            req.usuarioBDD = await Usuario.findByPk(id, {
+                attributes: { exclude: ['password'] }
+            });
+
             if (!req.usuarioBDD) {
                 return res.status(404).json({ msg: "❌ Usuario no encontrado" });
             } else {
-                console.log("✅ Usuario autenticado en DB:", req.usuarioBDD);
-                console.log("🔍 Headers:", req.headers);
-                console.log("🔍 Token recibido:", req.headers.authorization);
+                console.log("✅ Usuario autenticado en DB:", req.usuarioBDD.dataValues);
             }
+
         } else if (rol === "admin" || rol === "moderador") {
-            req.adminBDD = await Admin.findById(id).select("-password"); // 🔹 Eliminado `.lean()`
+            req.adminBDD = await Admin.findByPk(id, {
+                attributes: { exclude: ['password'] }
+            });
+
             if (!req.adminBDD) {
                 return res.status(404).json({ msg: "❌ Administrador no encontrado" });
             }
@@ -33,11 +38,11 @@ const verificarAutenticacion = async (req, res, next) => {
 
         next();
     } catch (error) {
-        return res.status(401).json({ msg: "❌ Token inválido" });
+        return res.status(401).json({ msg: "❌ Token inválido o expirado" });
     }
 };
 
-// 🔹 Rutas exclusivas para el administrador general (solo `admin`)
+// 🔹 Middleware exclusivo para el administrador general
 const verificarAdminGeneral = (req, res, next) => {
     if (!req.adminBDD || req.adminBDD.rol !== "admin") {
         return res.status(403).json({ msg: "❌ Acceso denegado. Solo el administrador general tiene permiso." });

@@ -1,124 +1,119 @@
-import mongoose from "mongoose";
-import cloudinary from "../config/cloudinary.js";
 import Disfraz from "../models/Disfraces.js";
-import fs from "fs"; // Para eliminar archivos temporales
+import Festividad from "../models/festividad.js";
+import cloudinary from "../config/cloudinary.js";
+import fs from "fs";
 
-// Método para listar todos los periféricos
+// 🔹 Listar todos los disfraces
 const listarDisfraces = async (req, res) => {
     try {
-        const disfraces = await Disfraz.find({}).select("-createdAt -updatedAt -__v");
+        const disfraces = await Disfraz.findAll({
+            include: {
+                model: Festividad,
+                as: "festividad", // 👈 alias obligatorio
+                attributes: ["id", "nombre", "mes", "dia"]
+            },
+            order: [["createdAt", "DESC"]]
+        });
         res.status(200).json(disfraces);
     } catch (error) {
-        console.log("❌ Error al listar los disfraces:", error);
+        console.error("❌ Error al listar disfraces:", error);
         res.status(500).json({ msg: "❌ Error al listar los disfraces", error });
     }
 };
 
-// Método para obtener el detalle de un periférico
+// 🔹 Detalle de un disfraz
 const detalleDisfraces = async (req, res) => {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-        return res.status(404).json({ msg: `❌ Lo sentimos, no existe ese disfraz` });
+    try {
+        const disfraz = await Disfraz.findByPk(id, {
+            include: {
+                model: Festividad,
+                as: "festividad",
+                attributes: ["id", "nombre", "mes", "dia"]
+            }
+        });
 
-    const disfraces = await Disfraz.findById(id);
-    if (!disfraces) 
-        return res.status(404).json({ msg: "❌ disfraz no encontrado" });
-
-    res.status(200).json(disfraces);
+        if (!disfraz) return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
+        res.status(200).json(disfraz);
+    } catch (error) {
+        console.error("❌ Error al buscar el disfraz:", error);
+        res.status(500).json({ msg: "❌ Error al buscar el disfraz", error });
+    }
 };
 
-
-// Método para registrar un disfraz
+// 🔹 Registrar nuevo disfraz
 const registrarDisfraz = async (req, res) => {
     try {
-        const { nombre, categoria, precio, calidad, descripcion, talla, festividad } = req.body;
+        const { nombre, categoria, precio, calidad, descripcion, talla, festividadId } = req.body;
 
-        if (!nombre || !categoria || !precio || !calidad || !descripcion || !talla || !festividad) {
+        if (!nombre || !categoria || !precio || !calidad || !descripcion || !talla || !festividadId) {
             return res.status(400).json({ msg: "❌ Todos los campos son necesarios" });
         }
 
-        let imagenUrl = req.file ? req.file.path : null;
+        const imagenUrl = req.file ? req.file.path : null;
 
-        const disfraz = new Disfraz({
-            nombre,
-            categoria,
-            precio,
-            calidad,
-            descripcion,
-            talla,
-            festividad,
+        const disfraz = await Disfraz.create({
+            nombre, categoria, precio, calidad, descripcion, talla,
             imagen: imagenUrl,
+            FestividadId: festividadId
         });
 
-        await disfraz.save();
-        res.status(201).json({ msg: `✅ Registro exitoso del disfraz ${disfraz._id}`, disfraz });
+        res.status(201).json({ msg: "✅ Disfraz registrado exitosamente", disfraz });
     } catch (error) {
         console.error("❌ Error al registrar el disfraz:", error);
         res.status(500).json({ msg: "❌ Error al registrar el disfraz", error });
     }
 };
 
-
-// Método para actualizar un disfraz
+// 🔹 Actualizar disfraz
 const actualizarDisfraz = async (req, res) => {
     const { id } = req.params;
-    const { nombre, categoria, precio, calidad, descripcion, talla, festividad } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({ msg: `❌ Lo sentimos, no existe el disfraz ${id}` });
-    }
+    const { nombre, categoria, precio, calidad, descripcion, talla, festividadId } = req.body;
 
     try {
-        // Buscar el disfraz antes de actualizar
-        const disfraz = await Disfraz.findById(id);
-        if (!disfraz) {
-            return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
-        }
+        const disfraz = await Disfraz.findByPk(id);
+        if (!disfraz) return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
 
-        // Actualizar solo los campos enviados en la solicitud
         disfraz.nombre = nombre || disfraz.nombre;
         disfraz.categoria = categoria || disfraz.categoria;
         disfraz.precio = precio || disfraz.precio;
         disfraz.calidad = calidad || disfraz.calidad;
         disfraz.descripcion = descripcion || disfraz.descripcion;
         disfraz.talla = talla || disfraz.talla;
-        disfraz.festividad = festividad || disfraz.festividad;
+        disfraz.FestividadId = festividadId || disfraz.FestividadId;
 
-        // Manejo de la imagen (si se sube una nueva)
-        if (req.file) { 
+        if (req.file) {
             disfraz.imagen = req.file.path;
         }
 
-        // Guardar cambios en la base de datos
         await disfraz.save();
+        res.status(200).json({ msg: "✅ Disfraz actualizado", disfraz });
 
-        res.status(200).json({ msg: "✅ Disfraz actualizado con éxito", disfraz });
     } catch (error) {
-        console.error("❌ Error al actualizar el disfraz:", error);
-        res.status(500).json({ msg: "❌ Error al actualizar el disfraz", error });
+        console.error("❌ Error al actualizar disfraz:", error);
+        res.status(500).json({ msg: "❌ Error al actualizar disfraz", error });
     }
 };
 
-
-// Método para eliminar un periférico
+// 🔹 Eliminar disfraz
 const eliminarDisfraces = async (req, res) => {
     const { id } = req.params;
+    try {
+        const disfraz = await Disfraz.findByPk(id);
+        if (!disfraz) return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-        return res.status(404).json({ msg: `❌ Lo sentimos, no existe el difraz ${id}` });
-
-    const disfrazEliminado  = await Disfraz.findByIdAndDelete(id);
-    if (!disfrazEliminado )
-        return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
-
-    res.status(200).json({ msg: "✅ Disfraz eliminado exitosamente" });
+        await disfraz.destroy();
+        res.status(200).json({ msg: "✅ Disfraz eliminado exitosamente" });
+    } catch (error) {
+        console.error("❌ Error al eliminar disfraz:", error);
+        res.status(500).json({ msg: "❌ Error al eliminar disfraz", error });
+    }
 };
 
-// Exportar los controladores
 export {
+    listarDisfraces,
     detalleDisfraces,
     registrarDisfraz,
     actualizarDisfraz,
-    eliminarDisfraces,
-    listarDisfraces
+    eliminarDisfraces
 };

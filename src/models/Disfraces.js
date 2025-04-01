@@ -1,51 +1,36 @@
-import mongoose, { Schema, model } from 'mongoose';
+import { DataTypes } from "sequelize";
+import { sequelize } from "../database.js";
 
-const disfrazSchema = new Schema({
+const Disfraz = sequelize.define("Disfraz", {
     nombre: {
-        type: String,
-        required: true,
-        trim: true,
-        unique: true
+        type: DataTypes.STRING, allowNull: false, unique: true
     },
     descripcion: {
-        type: String,
-        required: true,
-        trim: true
+        type: DataTypes.STRING, allowNull: false
     },
     talla: {
-        type: String,
-        required: true,
-        trim: true
+        type: DataTypes.STRING, allowNull: false
     },
     calidad: {
-        type: String,
-        required: true,
-        enum: ['Baja', 'Media', 'Alta']
+        type: DataTypes.ENUM("Baja", "Media", "Alta"), allowNull: false
     },
     categoria: {
-        type: String,
-        enum: ['Infantil', 'Adulto', 'Temático'],
-        required: true
+        type: DataTypes.ENUM("Infantil", "Adulto", "Temático"), allowNull: false
     },
     precio: {
-        type: Number,
-        required: true
+        type: DataTypes.FLOAT, allowNull: false
     },
     imagen: {
-        type: String,
-        required: false,
-        default: null
+        type: DataTypes.STRING, defaultValue: null
     },
-    favoritos: { 
-        type: Number, default: 0 
+    favoritos: {
+        type: DataTypes.INTEGER, defaultValue: 0
     },
-    compras: { 
-        type: Number, default: 0 
-    },
-    festividad: { type: mongoose.Schema.Types.ObjectId, ref: "Festividad", default: null}
-
+    cotizaciones: {
+        type: DataTypes.INTEGER, defaultValue: 0
+    }
 }, {
     timestamps: true
 });
 
-export default model('Disfraces', disfrazSchema);
+export default Disfraz;

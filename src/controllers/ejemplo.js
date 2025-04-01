@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-const passwordPlano = "usuario"; // Contraseña sin encriptar
+const passwordPlano = "admin"; // Contraseña sin encriptar
 
 bcrypt.hash(passwordPlano, 10, (err, hash) => {
     if (err) {

@@ -1,10 +1,21 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../database.js";
 
-const festividadSchema = new mongoose.Schema({
-    mes: { type: String, required: true },
-    dia: { type: Number, required: true },
-    nombre: { type: String, required: true },
-    descripcion: { type: String },
-}, { timestamps: true })
+const Festividad = sequelize.define("Festividad", {
+    nombre: { 
+        type: DataTypes.STRING, allowNull: false 
+    },
+    descripcion: { 
+        type: DataTypes.STRING 
+    },
+    mes: { 
+        type: DataTypes.STRING, allowNull: false 
+    },
+    dia: { 
+        type: DataTypes.INTEGER, allowNull: false 
+    },
+}, {
+    timestamps: true
+});
 
-export default mongoose.model('Festividad', festividadSchema);
+export default Festividad;

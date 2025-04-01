@@ -1,24 +1,28 @@
-//Importar mongoose
-import mongoose from 'mongoose'
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+dotenv.config(); // 👈 ¡Esto es obligatorio!
 
-// Pertimitir que solo los campos definidos en el Schema sean almacenados
-// enn la BDD
-mongoose.set('strictQuery', true)
+const sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PASSWORD,
+    {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        dialect: process.env.DB_TYPE,
+        logging: false
+    }
+);
 
-// Crear una función llamada connection()
 const connection = async () => {
     try {
-        // Establecer al conexión con la BDD
-        const { connection } = await mongoose.connect(process.env.MONGODB_URI)
-
-        // Presentar la conexión en consola 
-        console.log(`✅ Base de datos conectada en ${connection.host} - ${connection.port}`)
-
+        await sequelize.authenticate();
+        console.log("✅ Conectado a MySQL");
+        
     } catch (error) {
-        // Capturar Error en la conexión
-        console.log("❌ Error en la conexión a la base de datos:", error);
+        console.error("❌ Error de conexión MySQL:", error);
     }
 }
 
-//Exportar la función
-export default connection
+export { sequelize };
+export default connection;
