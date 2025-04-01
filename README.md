@@ -1,4 +1,4 @@
-
+# Documentacion completa en postman https://documenter.getpostman.com/view/41864049/2sB2cRE55Q
 # 🎭 Megadistraz API
 
 La **API de Megadistraz** proporciona un backend completo para gestionar usuarios, administradores, festividades y disfraces, con autenticación, subida de imágenes y manejo personalizado de favoritos. Esta API fue diseñada para servir a una plataforma web de catálogo de disfraces, donde los usuarios pueden explorar, filtrar, marcar como favoritos y actualizar su información, mientras que los administradores gestionan el contenido y los usuarios.
