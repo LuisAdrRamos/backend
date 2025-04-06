@@ -33,7 +33,11 @@ export const validacionAdmin = [
         .notEmpty().withMessage('La contraseña es obligatoria')
         .isLength({ min: 5 }).withMessage('La contraseña debe tener al menos 5 caracteres')
         .trim(),
-
+    check("tipo")
+    .optional() // Permite que no se envíe (para usar default: "moderador"), pero si viene, debe ser válido
+    .isIn(['general', 'moderador']).withMessage('El tipo debe ser "general" o "moderador"')
+    .trim(),
+    
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
