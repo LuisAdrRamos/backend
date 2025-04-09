@@ -1,39 +1,42 @@
 // Importar Router de Express
 import { Router } from 'express';
-
-// Importar los métodos del controlador
 import {
     login,
     listarAdmins,
     perfil,
     actualizarPerfil,
     actualizarPassword,
+
     recuperarPassword,
     comprobarTokenPasword,
     nuevoPassword,
+
     crearModerador,
+    detalleModerador,
+    actualizarModerador,
     eliminarModerador
 } from "../controllers/admin_controller.js";
 
-import {verificarAutenticacion, verificarAdminGeneral} from '../middlewares/autenticacion.js';
+import { verificarAutenticacion, permitirRoles } from '../middlewares/autenticacion.js';
 
 const router = Router();
 
-// 🔹 Rutas públicas (accesibles sin autenticación)
+// 🔹 Rutas públicas
 router.post("/login", login);  
 router.post("/recuperar-password", recuperarPassword);  
 router.get("/recuperar-password/:token", comprobarTokenPasword);  
 router.post("/nuevo-password/:token", nuevoPassword);
 
-// 🔹 Rutas protegidas (requieren autenticación de cualquier admin o moderador)
-router.get("/perfil", verificarAutenticacion, perfil);  
-router.put("/actualizar/:id", verificarAutenticacion, actualizarPerfil);
-router.put("/actualizar-password", verificarAutenticacion, actualizarPassword);
+// 🔹 Accesibles para admin o moderador
+router.get("/perfil", verificarAutenticacion, permitirRoles(["admin", "moderador"]), perfil);  
+router.put("/actualizar/:id", verificarAutenticacion, permitirRoles(["admin", "moderador"]), actualizarPerfil);
+router.put("/actualizar-password", verificarAutenticacion, permitirRoles(["admin", "moderador"]), actualizarPassword);
 
-// Solo el admin general puede gestionar moderadores
-router.post("/crear-moderador", verificarAutenticacion, verificarAdminGeneral, crearModerador);
-router.delete("/eliminar-moderador/:id", verificarAutenticacion, verificarAdminGeneral, eliminarModerador);
-router.get("/listar-moderadores", verificarAutenticacion, verificarAdminGeneral, listarAdmins);
+// 🔹 Exclusivo del admin general
+router.post("/crear-moderador", verificarAutenticacion, permitirRoles(["admin"]), crearModerador);
+router.get("/detalle-moderador/:id", verificarAutenticacion, permitirRoles(["admin"]), detalleModerador);
+router.put("/actualizar-moderador/:id", verificarAutenticacion, permitirRoles(["admin"]), actualizarModerador);
+router.delete("/eliminar-moderador/:id", verificarAutenticacion, permitirRoles(["admin"]), eliminarModerador);
+router.get("/listar-moderadores", verificarAutenticacion, permitirRoles(["admin"]), listarAdmins);
 
-// Exportar las rutas
 export default router;

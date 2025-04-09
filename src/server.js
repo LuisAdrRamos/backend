@@ -8,6 +8,7 @@ import admin from './routers/admin_routes.js'
 import usuario from './routers/usuario_routes.js'
 import disfraz from './routers/disfraces_routes.js'
 import festividad from './routers/festividad_routes.js';
+import etiqueta from './routers/etiquetas_routes.js';
 
 
 // Inicializaciones
@@ -33,6 +34,8 @@ app.use('/api/admin', admin)
 app.use('/api/usuario', usuario)
 app.use('/api/disfraz', disfraz)
 app.use('/api/festividad', festividad)
+app.use('/api/etiqueta', etiqueta);
+
 
 
 

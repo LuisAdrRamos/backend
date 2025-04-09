@@ -1,17 +1,23 @@
 import Disfraz from "../models/Disfraces.js";
 import Festividad from "../models/festividad.js";
-import cloudinary from "../config/cloudinary.js";
-import fs from "fs";
+import Etiqueta from "../models/etiquetas.js";
 
 // 🔹 Listar todos los disfraces
 const listarDisfraces = async (req, res) => {
     try {
         const disfraces = await Disfraz.findAll({
-            include: {
-                model: Festividad,
-                as: "festividad", // 👈 alias obligatorio
-                attributes: ["id", "nombre", "mes", "dia"]
-            },
+            include: [
+                {
+                    model: Festividad,
+                    as: "festividad",
+                    attributes: ["id", "nombre", "mes", "dia"]
+                },
+                {
+                    model: Etiqueta,
+                    as: "etiquetas",
+                    attributes: ["id", "nombre"]
+                }
+            ],
             order: [["createdAt", "DESC"]]
         });
         res.status(200).json(disfraces);
@@ -26,11 +32,18 @@ const detalleDisfraces = async (req, res) => {
     const { id } = req.params;
     try {
         const disfraz = await Disfraz.findByPk(id, {
-            include: {
-                model: Festividad,
-                as: "festividad",
-                attributes: ["id", "nombre", "mes", "dia"]
-            }
+            include: [
+                {
+                    model: Festividad,
+                    as: "festividad",
+                    attributes: ["id", "nombre", "mes", "dia"]
+                },
+                {
+                    model: Etiqueta,
+                    as: "etiquetas",
+                    attributes: ["id", "nombre"]
+                }
+            ]
         });
 
         if (!disfraz) return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
@@ -44,51 +57,68 @@ const detalleDisfraces = async (req, res) => {
 // 🔹 Registrar nuevo disfraz
 const registrarDisfraz = async (req, res) => {
     try {
-        const { nombre, categoria, precio, calidad, descripcion, talla, festividadId } = req.body;
+        const { nombre, descripcion, festividadId, etiquetas, imagenes } = req.body;
 
-        if (!nombre || !categoria || !precio || !calidad || !descripcion || !talla || !festividadId) {
-            return res.status(400).json({ msg: "❌ Todos los campos son necesarios" });
+        if (!nombre || !descripcion || !festividadId || !Array.isArray(etiquetas)) {
+            return res.status(400).json({ msg: "❌ Todos los campos son necesarios, incluyendo etiquetas[]" });
         }
 
-        const imagenUrl = req.file ? req.file.path : null;
+        if (etiquetas.length > 5) {
+            return res.status(400).json({ msg: "❌ No se pueden asignar más de 5 etiquetas" });
+        }
 
-        const disfraz = await Disfraz.create({
-            nombre, categoria, precio, calidad, descripcion, talla,
-            imagen: imagenUrl,
+        if (!imagenes || !Array.isArray(imagenes) || imagenes.length === 0 || imagenes.length > 3) {
+            return res.status(400).json({ msg: "❌ Se requieren de 1 a 3 imágenes" });
+        }
+
+        const yaExiste = await Disfraz.findOne({ where: { nombre } });
+        if (yaExiste) {
+            return res.status(400).json({ msg: "❌ Ya existe un disfraz con ese nombre" });
+        }
+
+        const nuevoDisfraz = await Disfraz.create({
+            nombre,
+            descripcion,
+            imagenes,
             FestividadId: festividadId
         });
 
-        res.status(201).json({ msg: "✅ Disfraz registrado exitosamente", disfraz });
+        // Relacionar con etiquetas
+        if (etiquetas && etiquetas.length > 0) {
+            await nuevoDisfraz.setEtiquetas(etiquetas);
+        }
+
+        res.status(201).json({ msg: "✅ Disfraz registrado", disfraz: nuevoDisfraz });
     } catch (error) {
-        console.error("❌ Error al registrar el disfraz:", error);
-        res.status(500).json({ msg: "❌ Error al registrar el disfraz", error });
+        console.error("❌ Error al registrar disfraz:", error);
+        res.status(500).json({ msg: "❌ Error interno del servidor", error });
     }
 };
 
 // 🔹 Actualizar disfraz
 const actualizarDisfraz = async (req, res) => {
     const { id } = req.params;
-    const { nombre, categoria, precio, calidad, descripcion, talla, festividadId } = req.body;
+    const { nombre, descripcion, festividadId, etiquetas, imagenes } = req.body;
 
     try {
         const disfraz = await Disfraz.findByPk(id);
         if (!disfraz) return res.status(404).json({ msg: "❌ Disfraz no encontrado" });
 
         disfraz.nombre = nombre || disfraz.nombre;
-        disfraz.categoria = categoria || disfraz.categoria;
-        disfraz.precio = precio || disfraz.precio;
-        disfraz.calidad = calidad || disfraz.calidad;
         disfraz.descripcion = descripcion || disfraz.descripcion;
-        disfraz.talla = talla || disfraz.talla;
         disfraz.FestividadId = festividadId || disfraz.FestividadId;
-
-        if (req.file) {
-            disfraz.imagen = req.file.path;
-        }
+        disfraz.imagenes = imagenes || disfraz.imagenes;
 
         await disfraz.save();
-        res.status(200).json({ msg: "✅ Disfraz actualizado", disfraz });
 
+        if (etiquetas && Array.isArray(etiquetas)) {
+            if (etiquetas.length > 5) {
+                return res.status(400).json({ msg: "❌ No se pueden asignar más de 5 etiquetas" });
+            }
+            await disfraz.setEtiquetas(etiquetas);
+        }
+
+        res.status(200).json({ msg: "✅ Disfraz actualizado correctamente", disfraz });
     } catch (error) {
         console.error("❌ Error al actualizar disfraz:", error);
         res.status(500).json({ msg: "❌ Error al actualizar disfraz", error });

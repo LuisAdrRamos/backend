@@ -6,7 +6,7 @@ const Festividad = sequelize.define("Festividad", {
         type: DataTypes.STRING, allowNull: false 
     },
     descripcion: { 
-        type: DataTypes.STRING 
+        type: DataTypes.STRING(250) 
     },
     mes: { 
         type: DataTypes.STRING, allowNull: false 

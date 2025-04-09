@@ -1,31 +1,21 @@
 import { Router } from 'express';
-import upload from "../config/multer.js"; // Configuración de multer para subir imágenes
-const router = Router();
-
 import {
     registrarDisfraz,
     listarDisfraces,
     detalleDisfraces,
     actualizarDisfraz,
-    eliminarDisfraces,
-
+    eliminarDisfraces
 } from "../controllers/disfraces_controller.js";
 
-import { verificarAutenticacion } from "../middlewares/autenticacion.js";
+import { verificarAutenticacion, permitirRoles } from "../middlewares/autenticacion.js";
 
-// Ruta para registrar un periférico
-router.post("/registro", verificarAutenticacion, upload.single("imagen"), registrarDisfraz);
+const router = Router();
+const puedeGestionarDisfraces = [verificarAutenticacion, permitirRoles(["admin", "moderador"])];
 
-// Ruta para listar todos periféricos
+router.post("/registro", ...puedeGestionarDisfraces, registrarDisfraz);
 router.get("/listar", listarDisfraces);
-
-// Ruta para ver el detalle de un periférico
 router.get("/detalle/:id", detalleDisfraces);
-
-// Ruta para actualizar un periférico (ahora con multer)
-router.put("/actualizar/:id", verificarAutenticacion, upload.single("imagen"), actualizarDisfraz);
-
-// Ruta para eliminar un periférico
-router.delete("/eliminar/:id", verificarAutenticacion, eliminarDisfraces);
+router.put("/actualizar/:id", ...puedeGestionarDisfraces, actualizarDisfraz);
+router.delete("/eliminar/:id", ...puedeGestionarDisfraces, eliminarDisfraces);
 
 export default router;

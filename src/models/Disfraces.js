@@ -3,31 +3,25 @@ import { sequelize } from "../database.js";
 
 const Disfraz = sequelize.define("Disfraz", {
     nombre: {
-        type: DataTypes.STRING, allowNull: false, unique: true
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     },
     descripcion: {
-        type: DataTypes.STRING, allowNull: false
+        type: DataTypes.STRING,
+        allowNull: false
     },
-    talla: {
-        type: DataTypes.STRING, allowNull: false
-    },
-    calidad: {
-        type: DataTypes.ENUM("Baja", "Media", "Alta"), allowNull: false
-    },
-    categoria: {
-        type: DataTypes.ENUM("Infantil", "Adulto", "Temático"), allowNull: false
-    },
-    precio: {
-        type: DataTypes.FLOAT, allowNull: false
-    },
-    imagen: {
-        type: DataTypes.STRING, defaultValue: null
+    imagenes: {
+        type: DataTypes.JSON, // Arreglo de URLs
+        allowNull: false
     },
     favoritos: {
-        type: DataTypes.INTEGER, defaultValue: 0
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     },
     cotizaciones: {
-        type: DataTypes.INTEGER, defaultValue: 0
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, {
     timestamps: true

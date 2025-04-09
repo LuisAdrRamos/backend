@@ -187,6 +187,55 @@ const crearModerador = async (req, res) => {
     }
 };
 
+
+const detalleModerador = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const moderador = await Admin.findByPk(id, {
+            attributes: { exclude: ['password', 'token', 'createdAt', 'updatedAt'] }
+        });
+
+        if (!moderador || moderador.rol !== "moderador") {
+            return res.status(404).json({ msg: "❌ Moderador no encontrado" });
+        }
+
+        res.status(200).json(moderador);
+    } catch (error) {
+        res.status(500).json({ msg: "❌ Error al obtener el moderador", error });
+    }
+};
+
+
+// 🔹 Actualizar datos de un moderador (solo admin general)
+const actualizarModerador = async (req, res) => {
+    if (!req.adminBDD || req.adminBDD.rol !== "admin") {
+        return res.status(403).json({ msg: "❌ Solo el administrador general puede actualizar moderadores" });
+    }
+
+    const { id } = req.params;
+
+    try {
+        const adminBDD = await Admin.findByPk(id);
+        if (!adminBDD || adminBDD.rol !== "moderador") {
+            return res.status(404).json({ msg: "❌ Moderador no encontrado" });
+        }
+
+        await adminBDD.update({
+            nombre: req.body.nombre || adminBDD.nombre,
+            apellido: req.body.apellido || adminBDD.apellido,
+            direccion: req.body.direccion || adminBDD.direccion,
+            telefono: req.body.telefono || adminBDD.telefono,
+            email: req.body.email || adminBDD.email
+        });
+
+        res.status(200).json({ msg: "✅ Moderador actualizado correctamente", moderador: adminBDD });
+    } catch (error) {
+        res.status(500).json({ msg: "❌ Error al actualizar moderador", error });
+    }
+};
+
+
 // 🔹 Eliminar moderador
 const eliminarModerador = async (req, res) => {
     if (!req.adminBDD || req.adminBDD.rol !== "admin") {
@@ -209,10 +258,14 @@ export {
     listarAdmins,
     perfil,
     actualizarPerfil,
+
     actualizarPassword,
     recuperarPassword,
     comprobarTokenPasword,
     nuevoPassword,
+
     crearModerador,
+    detalleModerador,
+    actualizarModerador,
     eliminarModerador
 };
