@@ -14,15 +14,15 @@ const iniciarServidor = async () => {
     console.log("✅ Conectado a la base de datos");
 
     // 2. Sincronizar modelos con la base de datos (ahora con relaciones cargadas)
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("🛠 Tablas sincronizadas con Sequelize");
 
     // 3. Crear admin por defecto (si no existe)
-    try {
-      await crearAdminPorDefecto();
-    } catch (errorSeed) {
-      console.error("❌ Error al crear el administrador por defecto:", errorSeed);
-    }
+    // try {
+    //   await crearAdminPorDefecto();
+    // } catch (errorSeed) {
+    //   console.error("❌ Error al crear el administrador por defecto:", errorSeed);
+    // }
 
     // 4. Iniciar servidor
     app.listen(port, () => {
