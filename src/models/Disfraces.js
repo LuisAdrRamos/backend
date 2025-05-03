@@ -8,7 +8,7 @@ const Disfraz = sequelize.define("Disfraz", {
         unique: true
     },
     descripcion: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(250),
         allowNull: false
     },
     imagenes: {
@@ -24,7 +24,9 @@ const Disfraz = sequelize.define("Disfraz", {
         defaultValue: 0
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    charset: 'utf8mb4', // Aseguramos soporte para caracteres especiales
+    collate: 'utf8mb4_unicode_ci'
 });
 
 export default Disfraz;

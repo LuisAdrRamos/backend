@@ -14,7 +14,9 @@ const Etiqueta = sequelize.define("Etiqueta", {
         allowNull: true
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    charset: 'utf8mb4', // Aseguramos soporte para caracteres especiales
+    collate: 'utf8mb4_unicode_ci'
 });
 
 export default Etiqueta;

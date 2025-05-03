@@ -15,7 +15,9 @@ const Festividad = sequelize.define("Festividad", {
         type: DataTypes.INTEGER, allowNull: false 
     },
 }, {
-    timestamps: true
+    timestamps: true,
+    charset: 'utf8mb4', // Aseguramos soporte para caracteres especiales
+    collate: 'utf8mb4_unicode_ci'
 });
 
 export default Festividad;

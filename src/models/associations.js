@@ -4,17 +4,21 @@ import Festividad from "./festividad.js";
 import Favorito from "./favoritos.js";
 import Etiqueta from "./etiquetas.js";
 import DisfrazEtiqueta from "./DisfrazEtiqueta.js";
+import DisfrazFestividad from "./DisfrazFestividad.js"; 
 
-// Relación 1:N entre Disfraz y Festividad
-Disfraz.belongsTo(Festividad, {
-    foreignKey: 'FestividadId',
-    as: 'festividad',
-    onDelete: 'SET NULL'
+// Relación N:M entre Disfraz y Festividad
+Disfraz.belongsToMany(Festividad, {
+    through: DisfrazFestividad,
+    as: 'festividades',
+    foreignKey: 'DisfrazId',
+    otherKey: 'FestividadId'
 });
 
-Festividad.hasMany(Disfraz, {
+Festividad.belongsToMany(Disfraz, {
+    through: DisfrazFestividad,
+    as: 'disfraces',
     foreignKey: 'FestividadId',
-    as: 'disfraces'
+    otherKey: 'DisfrazId'
 });
 
 // Relación N:M entre Disfraz y Etiqueta
