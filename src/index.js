@@ -26,7 +26,7 @@ const iniciarServidor = async () => {
 
     // 4. Iniciar servidor
     app.listen(port, () => {
-      console.log(`✅ Servidor corriendo en http://localhost:${port}`);
+      console.log(`✅ Servidor corriendo en https://backend-mywf.onrender.com`);
     });
   } catch (errorDB) {
     console.error("❌ Error general al iniciar la aplicación (Sequelize/Conexión):", errorDB);
