@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "bdd": "npx json-server --watch db.js --port=4000",
-    "test": "jest"
+    "test": "jest",
+    "build": "vite build"
   },
   "keywords": [],
   "author": "",
