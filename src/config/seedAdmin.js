@@ -10,10 +10,10 @@ export const crearAdminPorDefecto = async () => {
 
         if (!admin) {
             await Admin.create({
-                nombre: "Adrian",
-                apellido: "Ramos",
-                direccion: "Cuidadela hospitalaria",
-                telefono: "0998611804",
+                nombre: "Steven",
+                apellido: "Ortega",
+                direccion: "Yaruqui-parque centro",
+                telefono: "0992874034",
                 email: adminEmail,
                 password: adminPassword,
                 rol: "admin"
