@@ -13,7 +13,8 @@ const sequelize = new Sequelize(
         dialect: "mariadb",
         logging: false,
         dialectOptions: {
-            connectTimeout: 60000 // 🔹 Ajusta el tiempo de conexión
+            connectTimeout: 60000, // 🔹 Ajusta el tiempo de conexión
+            allowPublicKeyRetrieval: true // 🔹 Permite la recuperación de la clave pública RSA
         }
     }
 );
